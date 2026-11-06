@@ -65,8 +65,8 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let dt = g.dt;
   if (g.mode > 1.5) {
     // One invocation owns one particle: no atomics or CPU readback needed.
-    let target = select(g.world * .5, g.pointer, g.pressed > .5);
-    let delta = target - p.position;
+    let attractorPosition = select(g.world * .5, g.pointer, g.pressed > .5);
+    let delta = attractorPosition - p.position;
     let dist = max(length(delta), 35.);
     let tangent = vec2f(-delta.y, delta.x) / dist;
     let force = delta / dist * (18000. / (dist + 90.)) + tangent * 28.;

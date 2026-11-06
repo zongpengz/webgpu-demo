@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WgslReflect } from 'wgsl_reflect';
+import { WgslReflect, WgslScanner } from 'wgsl_reflect';
 import { backgroundShader, computeShader, particleShader, spriteShader } from './shaders';
 
 describe('WGSL shader contracts', () => {
@@ -9,6 +9,15 @@ describe('WGSL shader contracts', () => {
     particleShader,
     spriteShader,
   })) {
+    it(`${name} does not use the reserved WGSL target token`, () => {
+      // wgsl_reflect 1.2.3 accepts this identifier, but browser WGSL compilers reject it.
+      // Scan tokens rather than raw text so comments do not trigger this regression check.
+      const reservedTokens = new WgslScanner(code)
+        .scanTokens()
+        .filter((token) => token.lexeme === 'target')
+        .map((token) => ({ token: token.lexeme, line: token.line }));
+      expect(reservedTokens).toEqual([]);
+    });
     it(`${name} parses and preserves the CPU's 48-byte uniform layout`, () => {
       const shader = new WgslReflect(code);
       expect(shader.uniforms[0].size).toBe(48);
