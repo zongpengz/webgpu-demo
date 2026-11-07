@@ -1,16 +1,12 @@
 // WGSL shaders. All positions use the same 1000 × 650 logical game space.
-// Uniforms are 48 bytes; Particle is 32 bytes; Sprite is 48 bytes.
+// Uniforms are 24 bytes; Particle is 16 bytes; Sprite is 48 bytes.
 export const uniforms = /* wgsl */ `
 struct Globals {
   world: vec2f,
   time: f32,
   dt: f32,
-  pointer: vec2f,
-  mode: f32,
-  pressed: f32,
   glow: f32,
   count: f32,
-  padding: vec2f,
 };
 @group(0) @binding(0) var<uniform> g: Globals;
 `;
@@ -49,7 +45,7 @@ fn hash(p: vec2f) -> f32 { return fract(sin(dot(p, vec2f(127.1, 311.7))) * 43758
 `;
 
 const particleStruct = /* wgsl */ `
-struct Particle { position: vec2f, velocity: vec2f, data: vec4f };
+struct Particle { position: vec2f, seed: f32 };
 `;
 
 export const computeShader =
@@ -63,26 +59,11 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   if (i >= u32(g.count)) { return; }
   var p = particles[i];
   let dt = g.dt;
-  if (g.mode > 1.5) {
-    // One invocation owns one particle: no atomics or CPU readback needed.
-    let attractorPosition = select(g.world * .5, g.pointer, g.pressed > .5);
-    let delta = attractorPosition - p.position;
-    let dist = max(length(delta), 35.);
-    let tangent = vec2f(-delta.y, delta.x) / dist;
-    let force = delta / dist * (18000. / (dist + 90.)) + tangent * 28.;
-    p.velocity = (p.velocity + force * dt) * exp(-dt * .12);
-    p.position += p.velocity * dt;
-    if (length(p.position - g.world * .5) > 850.) {
-      p.position = g.world * .5 + normalize(p.position - g.world * .5) * 470.;
-      p.velocity *= -.2;
-    }
-  } else {
-    p.position.y += (10. + p.data.x * 58.) * dt;
-    p.position.x += sin(g.time * .15 + p.data.x * 60.) * dt * 2.;
-    if (p.position.y > g.world.y + 5.) { p.position.y = -5.; }
-    if (p.position.x < 0.) { p.position.x += g.world.x; }
-    if (p.position.x > g.world.x) { p.position.x -= g.world.x; }
-  }
+  p.position.y += (10. + p.seed * 58.) * dt;
+  p.position.x += sin(g.time * .15 + p.seed * 60.) * dt * 2.;
+  if (p.position.y > g.world.y + 5.) { p.position.y = -5.; }
+  if (p.position.x < 0.) { p.position.x += g.world.x; }
+  if (p.position.x > g.world.x) { p.position.x -= g.world.x; }
   particles[i] = p;
 }
 `;
@@ -102,13 +83,13 @@ struct Varying {
   let corners = array<vec2f, 6>(vec2f(-1.,-1.),vec2f(1.,-1.),vec2f(-1.,1.),vec2f(-1.,1.),vec2f(1.,-1.),vec2f(1.,1.));
   let p = particles[i];
   let q = corners[vi];
-  let radius = select(.65 + p.data.x * 1.05, .8 + p.data.x * 1.4, g.mode > 1.5);
+  let radius = .65 + p.seed * 1.05;
   let world = p.position + q * radius * 2.;
   var o: Varying;
   o.position = vec4f(world / g.world * vec2f(2., -2.) + vec2f(-1.,1.), 0., 1.);
   o.local = q;
-  o.color = mix(vec3f(.42,.28,.8), vec3f(.63,.81,1.), p.data.x);
-  o.alpha = select(.08 + pow(p.data.x, 8.) * .6, .28, g.mode > 1.5);
+  o.color = mix(vec3f(.42,.28,.8), vec3f(.63,.81,1.), p.seed);
+  o.alpha = .08 + pow(p.seed, 8.) * .6;
   return o;
 }
 @fragment fn fs(v: Varying) -> @location(0) vec4f {
@@ -158,9 +139,9 @@ struct Varying {
   } else if (v.kind == 3u) {
     d = (abs(p.x) + abs(p.y) - .8) * .7;
     fill = .3;
-  } else if (v.kind == 4u || v.kind == 6u) {
+  } else if (v.kind == 6u) {
     d = max(abs(p.x) - .93, abs(p.y) - .85);
-    fill = select(.12, .5, v.kind == 6u);
+    fill = .5;
   } else if (v.kind == 5u) {
     fill = 0.;
   }

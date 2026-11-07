@@ -17,7 +17,6 @@ export class GameAudio {
     const frequencies: Record<GameEvent, number> = {
       collect: 780,
       hit: 110,
-      brick: 490,
       dash: 220,
       win: 980,
       lose: 130,

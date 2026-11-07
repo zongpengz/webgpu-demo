@@ -1,13 +1,5 @@
 import { clamp } from '../core/math';
-import type {
-  Difficulty,
-  GameEvent,
-  GameInput,
-  GameSnapshot,
-  Phase,
-  Simulation,
-  Sprite,
-} from '../core/types';
+import type { Difficulty, GameEvent, GameInput, GameSnapshot, Phase, Sprite } from '../core/types';
 import { Effects, MINT, PURPLE } from './shared';
 
 interface Meteor {
@@ -30,7 +22,7 @@ const SETTINGS = {
   hard: { speed: 1.35, interval: 0.28 },
 };
 
-export class MeteorGame implements Simulation {
+export class MeteorGame {
   phase: Phase = 'ready';
   events: GameEvent[] = [];
   score = 0;
@@ -245,7 +237,6 @@ export class MeteorGame implements Simulation {
       phase: this.phase,
       x: this.x,
       y: this.y,
-      remaining: 0,
     };
   }
 }

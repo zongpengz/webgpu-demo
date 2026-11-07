@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { MeteorGame } from './meteor';
-import { BreakoutGame } from './breakout';
-import { GravityGame } from './gravity';
 import { seededRandom } from '../core/math';
 import type { GameInput } from '../core/types';
 
@@ -70,66 +68,5 @@ describe('星际闪避', () => {
     const score = game.score;
     game.update(1, input());
     expect(game.score).toBe(score);
-  });
-});
-
-describe('霓虹打砖块', () => {
-  it('等待发球，发球后才移动光球', () => {
-    const game = new BreakoutGame();
-    game.start();
-    game.update(dt, input());
-    expect(game.launched).toBe(false);
-    game.update(dt, input({ dash: true }));
-    expect(game.launched).toBe(true);
-    expect(game.ball.vy).toBeLessThan(0);
-  });
-  it('侧壁与挡板反弹，击中边缘时保留向上的速度', () => {
-    const game = new BreakoutGame();
-    game.start();
-    game.launched = true;
-    game.ball = { x: 36, y: 400, vx: -200, vy: 100 };
-    game.update(0.02, input());
-    expect(game.ball.vx).toBeGreaterThan(0);
-    game.ball = { x: 550, y: 558, vx: 0, vy: 300 };
-    game.update(0.01, input());
-    expect(game.ball.vy).toBeLessThan(0);
-    expect(game.ball.vx).toBeGreaterThan(0);
-  });
-  it('击碎一块砖只加一次分，并在清空后获胜', () => {
-    const game = new BreakoutGame();
-    game.start();
-    game.launched = true;
-    const brick = game.bricks[0];
-    game.bricks = [brick];
-    game.ball = { x: brick.x, y: brick.y + 20, vx: 0, vy: -300 };
-    game.update(0.01, input());
-    expect(brick.alive).toBe(false);
-    expect(game.phase).toBe('won');
-    expect(game.score).toBe(550);
-  });
-  it('丢球后重新等待发球，三次丢球结束游戏', () => {
-    const game = new BreakoutGame();
-    game.start();
-    for (let i = 0; i < 3; i++) {
-      game.launched = true;
-      game.ball.y = 660;
-      game.update(dt, input());
-    }
-    expect(game.lives).toBe(0);
-    expect(game.phase).toBe('over');
-  });
-});
-
-describe('粒子引力场', () => {
-  it('保持自由探索，并能重置计时', () => {
-    const game = new GravityGame();
-    game.start();
-    game.update(5, input());
-    expect(game.snapshot().time).toBe(5);
-    game.phase = 'paused';
-    game.update(5, input());
-    expect(game.snapshot().time).toBe(5);
-    game.start();
-    expect(game.snapshot().time).toBe(0);
   });
 });

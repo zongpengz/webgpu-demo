@@ -1,85 +1,38 @@
-import { GAMES } from '../games/catalog';
-import type { GameId } from '../core/types';
+import { GAME } from '../games/catalog';
+import type { Playground } from '../hooks/usePlayground';
 import { Icon } from './Icons';
 
-interface Props {
-  game: GameId;
-  engine: string;
-  onSelect: (id: GameId) => void;
-}
-export function Sidebar({ game, engine, onSelect }: Props) {
+export function Sidebar({ engine }: { engine: Playground['engine'] }) {
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" aria-label="游戏介绍">
       <div className="sidebar-heading">
-        <span>选择你的实验</span>
-        <span className="mono">03</span>
+        <span>本次实验</span>
+        <span className="mono">{GAME.number}</span>
       </div>
-      <div
-        className="game-list"
-        role="tablist"
-        aria-label="实验项目"
-        onKeyDown={(e) => {
-          const i = GAMES.findIndex((g) => g.id === game);
-          const next =
-            e.key === 'ArrowDown' || e.key === 'ArrowRight'
-              ? (i + 1) % GAMES.length
-              : e.key === 'ArrowUp' || e.key === 'ArrowLeft'
-                ? (i + GAMES.length - 1) % GAMES.length
-                : e.key === 'Home'
-                  ? 0
-                  : e.key === 'End'
-                    ? GAMES.length - 1
-                    : -1;
-          if (next !== -1) {
-            e.preventDefault();
-            onSelect(GAMES[next].id);
-            document.getElementById(`tab-${GAMES[next].id}`)?.focus();
-          }
-        }}
-      >
-        {GAMES.map((g) => (
-          <button
-            key={g.id}
-            className={`game-card ${game === g.id ? 'selected' : ''}`}
-            role="tab"
-            aria-selected={game === g.id}
-            id={`tab-${g.id}`}
-            aria-controls="game-panel"
-            tabIndex={game === g.id ? 0 : -1}
-            onClick={() => onSelect(g.id)}
-          >
-            <div className="card-top">
-              <span className={`game-icon ${g.color}`}>
-                <Icon name={g.icon} />
-              </span>
-              <span className="card-number">{g.number}</span>
-            </div>
-            <strong>
-              {g.name}
-              <span>↗</span>
-            </strong>
-            <span className="card-desc">{g.summary}</span>
-            <span className="card-tags">
-              {g.tags.map((tag) => (
-                <span key={tag}>{tag}</span>
-              ))}
-            </span>
-          </button>
-        ))}
-      </div>
+      <section className="game-card" aria-labelledby="sidebar-game-title">
+        <div className="card-top">
+          <span className="game-icon purple">
+            <Icon name={GAME.icon} />
+          </span>
+          <span className="card-number">{GAME.number}</span>
+        </div>
+        <strong id="sidebar-game-title">{GAME.name}</strong>
+        <span className="card-desc">{GAME.summary}</span>
+        <span className="card-tags">
+          {GAME.tags.map((tag) => (
+            <span key={tag}>{tag}</span>
+          ))}
+        </span>
+      </section>
       <div className="sidebar-bottom">
         <div className="engine-mini">
-          <span
-            className={`status-light ${engine === 'canvas' || engine === 'error' ? 'fallback' : ''}`}
-          />
+          <span className={`status-light ${engine === 'error' ? 'error' : ''}`} />
           <span>
             {engine === 'webgpu'
               ? 'WebGPU 引擎已连接'
-              : engine === 'canvas'
-                ? 'Canvas 兼容预览'
-                : engine === 'error'
-                  ? '渲染器初始化失败'
-                  : '正在连接 GPU'}
+              : engine === 'error'
+                ? 'WebGPU 暂不可用'
+                : '正在连接 GPU'}
           </span>
           <Icon name="chip" />
         </div>

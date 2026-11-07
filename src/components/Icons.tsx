@@ -27,11 +27,6 @@ export function IconDefinitions() {
           <rect x="3" y="14" width="7" height="7" rx="1.5" />
           <rect x="14" y="14" width="7" height="7" rx="1.5" />
         </symbol>
-        <symbol id="i-orbit" viewBox="0 0 24 24">
-          <ellipse cx="12" cy="12" rx="11" ry="5" transform="rotate(-40 12 12)" />
-          <circle cx="12" cy="12" r="3" />
-          <path d="m18 3 2-1 1 2" />
-        </symbol>
         <symbol id="i-code" viewBox="0 0 24 24">
           <path d="m7 7-5 5 5 5m10-10 5 5-5 5m-4-13-2 20" />
         </symbol>

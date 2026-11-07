@@ -6,7 +6,6 @@
   --text: #eeedf5;
   --muted: #777b8f;
   --purple: #a18aff;
-  --green: #9be4cb;
   --font: Inter, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
 }
@@ -216,28 +215,12 @@ svg {
 .sidebar-heading .mono {
   color: #595c6d;
 }
-.game-list {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-}
 .game-card {
   text-align: left;
   border-radius: 9px;
-  border: 1px solid transparent;
-  background: transparent;
+  border: 1px solid #5a477c;
   padding: 16px 15px 15px;
-  transition:
-    background 0.2s,
-    border-color 0.2s;
-}
-.game-card:hover {
-  background: #171821;
-  border-color: #343341;
-}
-.game-card.selected {
   background: linear-gradient(120deg, #232033, #1a1928);
-  border-color: #5a477c;
   box-shadow: 0 0 22px #8e6aff05;
 }
 .card-top {
@@ -261,20 +244,9 @@ svg {
   color: #b5a0ff;
   background: #403155;
 }
-.green {
-  color: #8ed8bf;
-  background: #21322e;
-}
-.orange {
-  color: #dfb78e;
-  background: #352b25;
-}
 .card-number {
   font-size: 10px;
   font-family: var(--mono);
-  color: #626072;
-}
-.game-card.selected .card-number {
   color: #b7a3e8;
 }
 .game-card strong {
@@ -283,13 +255,6 @@ svg {
   font-weight: 550;
   justify-content: space-between;
   letter-spacing: 0.5px;
-}
-.game-card strong > span {
-  color: #a58bcf;
-  opacity: 0;
-}
-.game-card.selected strong > span {
-  opacity: 1;
 }
 .card-desc {
   color: #858397;
@@ -305,14 +270,10 @@ svg {
 }
 .card-tags span {
   font-size: 9px;
-  color: #8d899f;
-  border: 1px solid #34313f;
+  color: #b0a4c7;
+  border: 1px solid #42374f;
   border-radius: 4px;
   padding: 3px 5px;
-}
-.game-card.selected .card-tags span {
-  border-color: #42374f;
-  color: #b0a4c7;
 }
 .sidebar-bottom {
   margin-top: auto;
@@ -340,7 +301,7 @@ svg {
   box-shadow: 0 0 8px #9ae5bc33;
   flex-shrink: 0;
 }
-.status-light.fallback {
+.status-light.error {
   background: #efbb78;
   box-shadow: none;
 }
@@ -430,6 +391,7 @@ h1 {
   min-width: 0;
 }
 .stage {
+  width: 100%;
   position: relative;
   aspect-ratio: 1000/650;
   background: #0c0b19;
@@ -566,9 +528,6 @@ h1 {
   pointer-events: none;
   background: radial-gradient(ellipse at 50% 48%, #100c24aa, transparent 67%);
 }
-.start-overlay.hidden {
-  display: none;
-}
 .overlay-kicker {
   color: #a99ac5;
   font-size: 8px;
@@ -629,6 +588,44 @@ h1 {
   font-size: 8px;
   margin-top: 13px;
   letter-spacing: 0.4px;
+}
+.engine-error {
+  z-index: 2;
+  background: #100e1ef5;
+  pointer-events: auto;
+  overflow-y: auto;
+  padding: 28px 24px;
+  justify-content: flex-start;
+}
+.engine-error-content {
+  width: 100%;
+  max-width: 520px;
+  margin: auto;
+}
+.engine-error h2 {
+  font-size: clamp(24px, 2.5vw, 34px);
+  letter-spacing: 1px;
+}
+.engine-error .engine-error-reason {
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid #775341;
+  border-radius: 7px;
+  background: #36251e;
+  color: #ffd3a5;
+  font-size: 13px;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: none;
+}
+.engine-error .engine-error-help {
+  color: #c1b5d2;
+  font-size: 11px;
+  max-width: none;
+}
+.engine-error .primary-button {
+  margin: 0 auto;
 }
 .stage-bottom {
   position: absolute;
@@ -1191,12 +1188,6 @@ dialog h2 {
   font-size: 11px;
   line-height: 1.9;
 }
-#note-content .file-link {
-  font-size: 11px;
-  color: #bc9de2;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
 .dialog-footer {
   display: flex;
   align-items: center;
@@ -1578,15 +1569,8 @@ dialog h2 {
   .sidebar-bottom {
     display: none;
   }
-  .game-list {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
   .game-card {
-    padding: 10px 9px;
-    border: 1px solid #25232e;
-    background: #14131c;
+    padding: 12px 14px;
     border-radius: 7px;
   }
   .card-top {
@@ -1605,13 +1589,9 @@ dialog h2 {
     font-size: 8px;
   }
   .game-card strong {
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 0;
   }
-  .game-card strong > span {
-    font-size: 11px;
-  }
-  .card-desc,
   .card-tags {
     display: none;
   }
@@ -1676,6 +1656,10 @@ dialog h2 {
   .start-overlay h2 {
     font-size: 29px;
     letter-spacing: 2px;
+  }
+  .engine-error h2 {
+    font-size: clamp(20px, 6vw, 29px);
+    letter-spacing: 0;
   }
   .start-overlay p {
     font-size: 9px;
@@ -1856,13 +1840,6 @@ dialog h2 {
   #note-content p {
     font-size: 11px;
   }
-}
-.compatibility-note {
-  color: #9e876c;
-  font-size: 9px;
-  line-height: 1.8;
-  margin: 11px 0 0;
-  overflow-wrap: anywhere;
 }
 .note-challenge {
   padding: 12px 15px;

@@ -2,12 +2,11 @@ import type { CSSProperties } from 'react';
 import type { Difficulty } from '../core/types';
 import type { Playground } from '../hooks/usePlayground';
 import { PARTICLE_COUNTS } from '../hooks/usePlayground';
-import { gameInfo } from '../games/catalog';
+import { GAME } from '../games/catalog';
 import { Icon } from './Icons';
 
 export function ControlPanel({ lab, onNotes }: { lab: Playground; onNotes: () => void }) {
   const labels: Record<Difficulty, string> = { easy: '轻松', normal: '标准', hard: '挑战' };
-  const gravity = lab.game === 'gravity';
   return (
     <aside className="control-panel" aria-label="实验控制台">
       <div className="panel-heading">
@@ -17,14 +16,13 @@ export function ControlPanel({ lab, onNotes }: { lab: Playground; onNotes: () =>
       </div>
       <section className="control-group">
         <div className="control-label">
-          {gravity ? '自由探索' : '挑战难度'}
-          <span>{gravity ? '无输赢' : labels[lab.difficulty]}</span>
+          挑战难度
+          <span>{labels[lab.difficulty]}</span>
         </div>
         <div className="segmented" role="group" aria-label="挑战难度">
           {(Object.keys(labels) as Difficulty[]).map((key) => (
             <button
               key={key}
-              disabled={gravity}
               className={lab.difficulty === key ? 'active' : ''}
               aria-pressed={lab.difficulty === key}
               onClick={() => lab.changeDifficulty(key)}
@@ -34,13 +32,11 @@ export function ControlPanel({ lab, onNotes }: { lab: Playground; onNotes: () =>
           ))}
         </div>
         <p className="control-note">
-          {gravity
-            ? '没有目标，只有引力与想象力。'
-            : lab.difficulty === 'normal'
-              ? '刚刚好的紧张感，准备好了吗？'
-              : lab.difficulty === 'easy'
-                ? '放慢节奏，从容地探索。'
-                : '更快的节奏，考验你的反应。'}
+          {lab.difficulty === 'normal'
+            ? '刚刚好的紧张感，准备好了吗？'
+            : lab.difficulty === 'easy'
+              ? '放慢节奏，从容地探索。'
+              : '更快的节奏，考验你的反应。'}
         </p>
       </section>
       <section className="control-group">
@@ -96,21 +92,17 @@ export function ControlPanel({ lab, onNotes }: { lab: Playground; onNotes: () =>
         </button>
       </section>
       <div className="record-card">
-        <span>{gravity ? '每一个轨道，都是新的' : '个人最佳'}</span>
+        <span>个人最佳</span>
         <strong>
-          {gravity ? '∞' : String(lab.best).padStart(4, '0')}
-          <span>{gravity ? 'POSSIBILITIES' : 'PTS'}</span>
+          {String(lab.best).padStart(4, '0')}
+          <span>PTS</span>
         </strong>
         <span className="record-decoration">↗</span>
       </div>
       <div className="under-hood">
         <span className="tiny-label">UNDER THE HOOD</span>
         <h3>不止是好看。</h3>
-        <p>
-          {lab.engine === 'canvas'
-            ? '当前为 Canvas 2D 兼容预览，最多显示 2,048 颗 CPU 粒子。在支持 WebGPU 的浏览器中，可体验真正的 GPU 并行计算。'
-            : gameInfo(lab.game).tech}
-        </p>
+        <p>{GAME.tech}</p>
         <button className="learn-link" onClick={onNotes}>
           看看它如何工作
           <Icon name="arrow" />

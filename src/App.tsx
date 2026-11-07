@@ -4,12 +4,11 @@ import { Sidebar } from './components/Sidebar';
 import { GameStage } from './components/GameStage';
 import { ControlPanel } from './components/ControlPanel';
 import { NotesDialog, type NoteId } from './components/NotesDialog';
-import { gameInfo } from './games/catalog';
+import { GAME } from './games/catalog';
 import { usePlayground } from './hooks/usePlayground';
 
 export default function App() {
-  const lab = usePlayground(),
-    info = gameInfo(lab.game);
+  const lab = usePlayground();
   const [notesOpen, setNotesOpen] = useState(false),
     [note, setNote] = useState<NoteId>('compute');
   function openNotes(id: NoteId = 'compute') {
@@ -59,20 +58,20 @@ export default function App() {
         </div>
       </header>
       <div className="app-shell">
-        <Sidebar game={lab.game} engine={lab.engine} onSelect={lab.selectGame} />
-        <main id="game-panel" role="tabpanel" aria-labelledby={`tab-${lab.game}`}>
+        <Sidebar engine={lab.engine} />
+        <main aria-labelledby="game-title">
           <div className="page-heading">
             <div>
               <div className="eyebrow">
-                <span /> SMALL GAMES. BIG POSSIBILITIES.
+                <span /> ONE FLIGHT. A SKY OF POSSIBILITIES.
               </div>
-              <h1>
-                {info.name}
-                <span className="title-en">{info.en}</span>
+              <h1 id="game-title">
+                {GAME.name}
+                <span className="title-en">{GAME.en}</span>
               </h1>
-              <p className="page-description">{info.description}</p>
+              <p className="page-description">{GAME.description}</p>
             </div>
-            <span className="experiment-label mono">EXPERIMENT / 0{info.number}</span>
+            <span className="experiment-label mono">EXPERIMENT / {GAME.number}</span>
           </div>
           <div className="play-layout">
             <GameStage lab={lab} />

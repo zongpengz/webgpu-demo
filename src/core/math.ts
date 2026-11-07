@@ -1,15 +1,4 @@
 export const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
-export function circleRect(
-  cx: number,
-  cy: number,
-  radius: number,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-) {
-  return Math.hypot(cx - clamp(cx, x - w, x + w), cy - clamp(cy, y - h, y + h)) < radius;
-}
 /** Small seeded PRNG, also lets physics tests replay the same scenario. */
 export function seededRandom(seed: number) {
   return () => {

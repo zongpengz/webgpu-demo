@@ -5,18 +5,18 @@ const NOTES = {
   compute: {
     title: '不是循环 32,768 次，而是让 GPU 一起做。',
     paragraphs: [
-      'CPU 只负责把时间、鼠标位置和参数写进一个 48 字节的 Uniform Buffer。粒子的位置和速度保存在 Storage Buffer 中，每个 GPU 线程只更新自己负责的粒子。',
-      '每个工作组有 64 个调用。16,384 颗粒子会分成 256 组。修改粒子数量，观察 FPS 的变化；按住引力场，看看同一套代码如何产生完全不同的运动。',
+      '星尘模拟使用一个 24 字节的 Uniform Buffer：world 从字节 0 开始，time、dt、glow、count 分别从字节 8、12、16、20 开始。粒子保存在 Storage Buffer 中，每个 GPU 调用只更新自己负责的粒子。',
+      '每个工作组有 64 个调用。16,384 颗星尘会分成 256 组，向下漂移并在越界后循环。这些装饰粒子不参与碰撞与计分；修改粒子数量，观察 FPS 与星空密度的变化。',
     ],
-    code: '// src/shaders.ts → computeShader\n@compute @workgroup_size(64)\nfn main(@builtin(global_invocation_id) id: vec3u) {\n  if (id.x >= u32(g.count)) { return; }\n  var p = particles[id.x];\n  p.position += p.velocity * g.dt;\n  particles[id.x] = p;\n}',
+    code: '// src/shaders.ts → computeShader（节选）\n@compute @workgroup_size(64)\nfn main(@builtin(global_invocation_id) id: vec3u) {\n  if (id.x >= u32(g.count)) { return; }\n  var p = particles[id.x];\n  p.position.y += (10. + p.seed * 58.) * g.dt;\n  if (p.position.y > g.world.y + 5.) {\n    p.position.y = -5.;\n  }\n  particles[id.x] = p;\n}',
     files: 'src/shaders.ts · src/engine/renderer.ts',
-    challenge: '动手试试：修改引力公式中的切向力 28，观察轨道从盘旋变为坠落。',
+    challenge: '动手试试：修改 computeShader 中星尘下落速度的系数 58，观察飞行氛围的变化。',
   },
   render: {
     title: '一张小四边形，绘制一整片星海。',
     paragraphs: [
       '粒子复用相同的 6 个顶点，顶点着色器通过 instance_index 从显存读取每颗粒子的位置。一条 draw(6, count) 就能绘制上万颗粒子。',
-      '飞船、陨石和砖块也被打包成实例。片元着色器通过 SDF 距离函数计算轮廓与辉光，加法混合让相遇的光叠加。这里没有加载任何贴图，也没有真正的 Bloom 后处理。',
+      '飞船、陨石、能量与爆裂火花也被打包成精灵实例，它们的位置由 CPU 游戏规则决定。片元着色器通过 SDF 距离函数计算轮廓与辉光，加法混合让相遇的光叠加。这里没有加载任何贴图，也没有真正的 Bloom 后处理。',
     ],
     code: '// src/engine/renderer.ts → render()\nconst compute = encoder.beginComputePass();\ncompute.dispatchWorkgroups(Math.ceil(count / 64));\ncompute.end();\n\nconst pass = encoder.beginRenderPass(descriptor);\npass.setPipeline(particlePipeline);\npass.draw(6, count); // 共享顶点，不共享位置\npass.end();',
     files: 'src/engine/renderer.ts · src/shaders.ts',
@@ -26,11 +26,11 @@ const NOTES = {
     title: '让物理稳定，让界面从容更新。',
     paragraphs: [
       'requestAnimationFrame 驱动渲染。游戏物理以 1/120 秒固定步长更新，碰撞与得分留在 CPU，粒子模拟交给 GPU。切换标签页、失去焦点或打开学习笔记时会自动暂停。',
-      'React 只以约 10 Hz 接收游戏快照，不在每颗粒子或每个物理步上重新渲染。新增游戏只需实现 Simulation 接口，再在游戏工厂和目录中注册。',
+      'React 只以约 10 Hz 接收游戏快照，不在每颗星尘或每个物理步上重新渲染。MeteorGame 输出精灵、分数、护盾与游戏事件；渲染器只接收画面数据，不决定胜负。',
     ],
     code: '// src/hooks/usePlayground.ts\nconst STEP = 1 / 120;\naccumulator += Math.min(elapsed, 0.05);\nwhile (accumulator >= STEP) {\n  simulation.update(STEP, input);\n  accumulator -= STEP;\n}\nrenderer.render(frame, simulation.getSprites(time));',
-    files: 'src/core/types.ts · src/games/ · src/hooks/usePlayground.ts',
-    challenge: '动手试试：修改 meteor.ts 的生成间隔；或者实现一个 Simulation，加入第四个实验。',
+    files: 'src/core/types.ts · src/games/meteor.ts · src/hooks/usePlayground.ts',
+    challenge: '动手试试：修改 meteor.ts 中的陨石生成间隔，再为新的节奏补充规则测试。',
   },
 };
 export function NotesDialog({
