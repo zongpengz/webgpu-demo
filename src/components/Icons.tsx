@@ -10,6 +10,39 @@ export function IconDefinitions() {
   return (
     <svg className="svg-defs" aria-hidden="true">
       <defs>
+        <symbol id="i-crosshair" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="7" />
+          <circle cx="12" cy="12" r="2" />
+          <path d="M12 2v4m0 12v4M2 12h4m12 0h4" />
+        </symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24">
+          <path d="m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6Z" />
+          <path d="m8 12 3 3 5-6" />
+        </symbol>
+        <symbol id="i-bolt" viewBox="0 0 24 24">
+          <path d="m14 2-9 12h6l-1 8 9-12h-6Z" />
+        </symbol>
+        <symbol id="i-orbit" viewBox="0 0 24 24">
+          <ellipse cx="12" cy="12" rx="11" ry="5" transform="rotate(-40 12 12)" />
+          <circle cx="12" cy="12" r="3" />
+        </symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24">
+          <rect x="5" y="10" width="14" height="11" rx="2" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+          <path d="m5 12 4 4L19 6" />
+        </symbol>
+        <symbol id="i-warning" viewBox="0 0 24 24">
+          <path d="m12 3 10 18H2ZM12 9v5m0 3v.2" />
+        </symbol>
+        <symbol id="i-trophy" viewBox="0 0 24 24">
+          <path d="M8 3h8v7a4 4 0 0 1-8 0ZM8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 14v6m-4 1h8" />
+        </symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24">
+          <path d="m9 3-1 3-3 1 1 3-2 2 2 2-1 3 3 1 1 3h6l1-3 3-1-1-3 2-2-2-2 1-3-3-1-1-3Z" />
+          <circle cx="12" cy="12" r="3" />
+        </symbol>
         <symbol id="i-cube" viewBox="0 0 24 24">
           <path d="m12 2 9 5v10l-9 5-9-5V7Z" />
           <path d="m3 7 9 5 9-5M12 12v10M7.5 4.5l9 5" />

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Difficulty, GameInput, GameSnapshot } from '../core/types';
+import type { Difficulty, GameInput, GameSnapshot, UpgradeId, WeaponId } from '../core/types';
 import { MeteorGame } from '../games/meteor';
 import { WebGPURenderer, WORLD } from '../engine/renderer';
 import { GameAudio } from '../engine/audio';
-import { readBest, saveBest } from '../core/storage';
+import { readBest, readProgress, saveBest, saveProgress } from '../core/storage';
 
 export const PARTICLE_COUNTS = [2048, 8192, 16384, 32768];
 const STEP = 1 / 120;
@@ -13,6 +13,8 @@ const emptyInput = (): GameInput => ({
   pointer: { x: 500, y: 325 },
   pointerControl: false,
   dash: false,
+  bomb: false,
+  fire: false,
 });
 
 export function usePlayground() {
@@ -29,6 +31,9 @@ export function usePlayground() {
   });
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [snapshot, setSnapshot] = useState<GameSnapshot>(simRef.current.snapshot());
+  const [progress, setProgress] = useState(readProgress);
+  const [selectedStage, setSelectedStage] = useState(0);
+  const selectedStageRef = useRef(0);
   const [engine, setEngine] = useState<'loading' | 'webgpu' | 'error'>('loading');
   const [engineReason, setEngineReason] = useState('');
   const [stats, setStats] = useState({ fps: 0, particles: 16384, draws: 0 });
@@ -48,7 +53,7 @@ export function usePlayground() {
   }, []);
   const start = useCallback(() => {
     if (!rendererRef.current) return;
-    simRef.current.start();
+    simRef.current.start(selectedStageRef.current);
     inputRef.current = emptyInput();
     setSnapshot(simRef.current.snapshot());
     focus();
@@ -70,14 +75,63 @@ export function usePlayground() {
   }, []);
   const changeDifficulty = useCallback(
     (value: Difficulty) => {
+      if (['running', 'paused', 'upgrade'].includes(simRef.current.phase)) return;
       setDifficulty(value);
-      simRef.current = new MeteorGame(value);
-      inputRef.current = emptyInput();
+      simRef.current.difficulty = value;
       setSnapshot(simRef.current.snapshot());
-      notify('难度已更新，开始一局新挑战吧');
+      notify('交战强度已更新');
     },
     [notify],
   );
+  const selectStage = useCallback(
+    (stage: number) => {
+      if (
+        ['running', 'paused', 'upgrade'].includes(simRef.current.phase) ||
+        stage > Math.min(2, progress)
+      )
+        return;
+      selectedStageRef.current = stage;
+      setSelectedStage(stage);
+      const old = simRef.current;
+      const game = new MeteorGame(old.difficulty);
+      game.weapon = old.weapon;
+      game.autoFire = old.autoFire;
+      game.stage = stage;
+      simRef.current = game;
+      setSnapshot(game.snapshot());
+    },
+    [progress],
+  );
+  const setWeapon = useCallback(
+    (weapon: WeaponId) => {
+      simRef.current.setWeapon(weapon);
+      setSnapshot(simRef.current.snapshot());
+      if (simRef.current.phase === 'running') focus();
+    },
+    [focus],
+  );
+  const toggleAutoFire = useCallback(() => {
+    simRef.current.toggleAutoFire();
+    setSnapshot(simRef.current.snapshot());
+    focus();
+  }, [focus]);
+  const chooseUpgrade = useCallback(
+    (upgrade: UpgradeId) => {
+      simRef.current.chooseUpgrade(upgrade);
+      setSnapshot(simRef.current.snapshot());
+      inputRef.current = emptyInput();
+      focus();
+    },
+    [focus],
+  );
+  const dash = useCallback(() => {
+    inputRef.current.dash = true;
+    focus();
+  }, [focus]);
+  const bomb = useCallback(() => {
+    inputRef.current.bomb = true;
+    focus();
+  }, [focus]);
   const changeParticles = useCallback((value: number) => {
     setParticles(value);
     currentRef.current.particles = PARTICLE_COUNTS[value];
@@ -169,15 +223,25 @@ export function usePlayground() {
       input.y =
         Number(keys.has('s') || keys.has('arrowdown')) -
         Number(keys.has('w') || keys.has('arrowup'));
+      input.fire = keys.has('j') || pointerDown;
       if (s.phase === 'running') {
+        // 固定步长隔离显示帧率与战斗规则，dt 的 50 ms 上限限制卡顿后的追帧量。
         accumulator += dt;
         while (accumulator >= STEP) {
           s.update(STEP, input);
+          // 冲刺与脉冲只消费一次，连续开火和移动则在每个物理步读取。
           input.dash = false;
+          input.bomb = false;
           accumulator -= STEP;
           for (const event of s.events.splice(0)) {
             audio.play(event);
-            if (event === 'hit' && s.phase === 'running') notify('护盾受损！短暂无敌，继续前进');
+            if (event === 'hit' && s.phase === 'running' && s.shield === 0)
+              notify('护盾耗尽，注意舰体完整度');
+            if (event === 'stage') {
+              setProgress(saveProgress(s.stage + 1));
+              setBest(saveBest(s.snapshot().score));
+              setSnapshot(s.snapshot());
+            }
             if (event === 'win' || event === 'lose') {
               setBest(saveBest(s.snapshot().score));
               setSnapshot(s.snapshot());
@@ -195,6 +259,11 @@ export function usePlayground() {
             time: now / 1000,
             dt: s.phase === 'paused' ? 0 : dt,
             glow: currentRef.current.glow,
+            stage: s.stage,
+            danger: s.boss ? 1 : 0,
+            shake: s.phase === 'running' ? s.shake : 0,
+            flash: s.phase === 'running' ? s.flash : 0,
+            speed: s.boss ? 0.5 : 1 + s.stage * 0.2,
           },
           sprites,
         );
@@ -206,6 +275,7 @@ export function usePlayground() {
       statTime += elapsed;
       uiTime += dt;
       if (uiTime >= 0.1) {
+        // HUD 只需约 10 Hz，GPU 绘制与物理循环继续按各自频率运行。
         setSnapshot(s.snapshot());
         uiTime = 0;
       }
@@ -238,6 +308,11 @@ export function usePlayground() {
           'p',
           'r',
           'enter',
+          'q',
+          'e',
+          'b',
+          'j',
+          'f',
         ].includes(key)
       )
         e.preventDefault();
@@ -249,6 +324,17 @@ export function usePlayground() {
       if (key === 'p' || key === 'escape') togglePause();
       if (key === 'r') reset();
       if (key === ' ') inputRef.current.dash = true;
+      if (key === 'e' || key === 'b') inputRef.current.bomb = true;
+      if (key === 'q') {
+        simRef.current.cycleWeapon();
+        setSnapshot(simRef.current.snapshot());
+      }
+      if (key === 'f') {
+        simRef.current.toggleAutoFire();
+        setSnapshot(simRef.current.snapshot());
+      }
+      if (['1', '2', '3'].includes(key) && simRef.current.phase === 'upgrade')
+        chooseUpgrade((['overdrive', 'armor', 'drone'] as UpgradeId[])[Number(key) - 1]);
     };
     const onKeyUp = (e: KeyboardEvent) => keys.delete(e.key.toLowerCase());
     let pointerDown = false;
@@ -264,12 +350,12 @@ export function usePlayground() {
       if (!rendererRef.current || !(e.target instanceof HTMLCanvasElement)) return;
       pointerDown = true;
       updatePointer(e);
-      inputRef.current.dash = true;
       stage.setPointerCapture(e.pointerId);
       focus();
     };
     const move = (e: PointerEvent) => {
-      if (e.pointerType === 'mouse' || pointerDown) updatePointer(e);
+      if (pointerDown || (e.pointerType === 'mouse' && e.target instanceof HTMLCanvasElement))
+        updatePointer(e);
     };
     const up = () => {
       pointerDown = false;
@@ -311,7 +397,7 @@ export function usePlayground() {
       stage.removeEventListener('pointercancel', up);
       stage.removeEventListener('lostpointercapture', up);
     };
-  }, [focus, notify, pause, reset, start, togglePause]);
+  }, [chooseUpgrade, focus, notify, pause, reset, start, togglePause]);
 
   return {
     canvasRef,
@@ -325,6 +411,14 @@ export function usePlayground() {
     glow,
     sound,
     best,
+    progress,
+    selectedStage,
+    selectStage,
+    setWeapon,
+    toggleAutoFire,
+    chooseUpgrade,
+    dash,
+    bomb,
     toast,
     start,
     togglePause,

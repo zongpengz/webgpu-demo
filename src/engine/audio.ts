@@ -20,16 +20,22 @@ export class GameAudio {
       dash: 220,
       win: 980,
       lose: 130,
+      shoot: 360,
+      kill: 95,
+      boss: 70,
+      stage: 880,
+      bomb: 55,
+      upgrade: 660,
     };
     const osc = ctx.createOscillator(),
       gain = ctx.createGain();
-    osc.type = event === 'hit' || event === 'lose' ? 'triangle' : 'sine';
+    osc.type = ['hit', 'lose', 'kill', 'bomb', 'boss'].includes(event) ? 'triangle' : 'sine';
     osc.frequency.setValueAtTime(frequencies[event], now);
     osc.frequency.exponentialRampToValueAtTime(
       frequencies[event] * (event === 'win' || event === 'collect' ? 1.8 : 0.5),
       now + 0.16,
     );
-    gain.gain.setValueAtTime(0.035, now);
+    gain.gain.setValueAtTime(event === 'shoot' ? 0.006 : 0.025, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
     osc.connect(gain);
     gain.connect(ctx.destination);

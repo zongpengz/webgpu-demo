@@ -1,3 +1,4 @@
+import { SPRITE_KIND } from '../core/sprites';
 import type { Color, Sprite } from '../core/types';
 
 interface Spark {
@@ -35,9 +36,7 @@ export class Effects {
       rx: 2,
       ry: 2,
       color: [p.color[0], p.color[1], p.color[2], p.life / p.max],
-      kind: 0,
+      kind: SPRITE_KIND.spark,
     }));
   }
 }
-export const PURPLE: Color = [0.68, 0.47, 1, 1];
-export const MINT: Color = [0.45, 0.95, 0.79, 1];

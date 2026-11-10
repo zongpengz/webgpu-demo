@@ -2,15 +2,13 @@ import { backgroundShader, computeShader, particleShader, spriteShader } from '.
 import type { RenderFrame, Sprite } from '../core/types';
 
 const MAX_PARTICLES = 32768;
-const MAX_SPRITES = 2048;
+const MAX_SPRITES = 4096;
 export const WORLD = { width: 1000, height: 650 };
 
 function initialParticles() {
   const data = new Float32Array(MAX_PARTICLES * 4);
   for (let i = 0; i < MAX_PARTICLES; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const r = Math.sqrt(Math.random()) * 430;
-    data.set([500 + Math.cos(a) * r, 325 + Math.sin(a) * r * 0.75, Math.random(), 0], i * 4);
+    data.set([Math.random() * WORLD.width, Math.random() * WORLD.height, Math.random(), 0], i * 4);
   }
   return data;
 }
@@ -70,7 +68,7 @@ export class WebGPURenderer {
     this.device = device;
     this.count = 16384;
     this.drawCalls = 3;
-    this.uniformData = new Float32Array(6);
+    this.uniformData = new Float32Array(12);
     this.spriteData = new Float32Array(MAX_SPRITES * 12);
   }
   async initialize() {
@@ -82,7 +80,7 @@ export class WebGPURenderer {
     const format = navigator.gpu.getPreferredCanvasFormat();
     this.context.configure({ device: d, format, alphaMode: 'opaque' });
     this.uniformBuffer = d.createBuffer({
-      label: '24-byte frame uniforms',
+      label: '48-byte combat frame uniforms',
       size: this.uniformData.byteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -113,7 +111,7 @@ export class WebGPURenderer {
       module('Particle render WGSL', particleShader),
       module('Sprite SDF WGSL', spriteShader),
     ]);
-    const renderPipeline = (shader: GPUShaderModule, additive: boolean) =>
+    const renderPipeline = (shader: GPUShaderModule, blend: 'opaque' | 'additive' | 'alpha') =>
       d.createRenderPipelineAsync({
         layout: 'auto',
         vertex: { module: shader, entryPoint: 'vs' },
@@ -123,10 +121,14 @@ export class WebGPURenderer {
           targets: [
             {
               format,
-              ...(additive
+              ...(blend !== 'opaque'
                 ? {
                     blend: {
-                      color: { srcFactor: 'src-alpha', dstFactor: 'one', operation: 'add' },
+                      color: {
+                        srcFactor: 'src-alpha',
+                        dstFactor: blend === 'additive' ? 'one' : 'one-minus-src-alpha',
+                        operation: 'add',
+                      },
                       alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' },
                     },
                   }
@@ -138,13 +140,13 @@ export class WebGPURenderer {
       });
     [this.backgroundPipeline, this.computePipeline, this.particlePipeline, this.spritePipeline] =
       await Promise.all([
-        renderPipeline(bg, false),
+        renderPipeline(bg, 'opaque'),
         d.createComputePipelineAsync({
           layout: 'auto',
           compute: { module: compute, entryPoint: 'main' },
         }),
-        renderPipeline(particles, true),
-        renderPipeline(sprites, true),
+        renderPipeline(particles, 'additive'),
+        renderPipeline(sprites, 'alpha'),
       ]);
     const group = (pipeline: GPURenderPipeline | GPUComputePipeline, buffer?: GPUBuffer) =>
       d.createBindGroup({
@@ -185,7 +187,21 @@ export class WebGPURenderer {
   }
   render(frame: RenderFrame, sprites: Sprite[]) {
     const d = this.device;
-    this.uniformData.set([WORLD.width, WORLD.height, frame.time, frame.dt, frame.glow, this.count]);
+    // 顺序与 WGSL Globals 的 48 字节布局一致，修改时同步更新 shaders.test.ts。
+    this.uniformData.set([
+      WORLD.width,
+      WORLD.height,
+      frame.time,
+      frame.dt,
+      frame.glow,
+      this.count,
+      frame.stage,
+      frame.danger,
+      Math.sin(frame.time * 91) * frame.shake,
+      Math.cos(frame.time * 73) * frame.shake,
+      frame.flash,
+      frame.speed,
+    ]);
     d.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
     const count = Math.min(sprites.length, MAX_SPRITES);
     for (let i = 0; i < count; i++) {
@@ -196,6 +212,7 @@ export class WebGPURenderer {
       );
     }
     if (count) d.queue.writeBuffer(this.spriteBuffer, 0, this.spriteData, 0, count * 12);
+    // 同一命令编码器内先更新星尘，再由渲染管线读取，避免 CPU 读回和额外同步。
     const encoder = d.createCommandEncoder({ label: 'Compute → render frame' });
     const compute = encoder.beginComputePass();
     compute.setPipeline(this.computePipeline);

@@ -1,112 +1,106 @@
 import type { CSSProperties } from 'react';
 import type { Difficulty } from '../core/types';
 import type { Playground } from '../hooks/usePlayground';
-import { PARTICLE_COUNTS } from '../hooks/usePlayground';
-import { GAME } from '../games/catalog';
+import { WEAPONS, WEAPON_IDS } from '../games/catalog';
+import { DIFFICULTIES } from '../games/combat';
 import { Icon } from './Icons';
+import { ShipPortrait } from './ShipPortrait';
 
-export function ControlPanel({ lab, onNotes }: { lab: Playground; onNotes: () => void }) {
-  const labels: Record<Difficulty, string> = { easy: '轻松', normal: '标准', hard: '挑战' };
+export function ControlPanel({ lab }: { lab: Playground }) {
+  const s = lab.snapshot,
+    weapon = WEAPONS[s.weapon];
+  const active = ['running', 'paused', 'upgrade'].includes(s.phase);
   return (
-    <aside className="control-panel" aria-label="实验控制台">
-      <div className="panel-heading">
-        <Icon name="chip" />
-        <h2>实验控制台</h2>
-        <span>⌘</span>
+    <aside className="loadout-panel">
+      <div className="section-heading">
+        <span>战机整备</span>
       </div>
-      <section className="control-group">
-        <div className="control-label">
-          挑战难度
-          <span>{labels[lab.difficulty]}</span>
+      <div className="ship-profile">
+        <ShipPortrait />
+        <div>
+          <strong>游隼 · 改装型</strong>
         </div>
-        <div className="segmented" role="group" aria-label="挑战难度">
-          {(Object.keys(labels) as Difficulty[]).map((key) => (
-            <button
-              key={key}
-              className={lab.difficulty === key ? 'active' : ''}
-              aria-pressed={lab.difficulty === key}
-              onClick={() => lab.changeDifficulty(key)}
-            >
-              {labels[key]}
-            </button>
-          ))}
-        </div>
-        <p className="control-note">
-          {lab.difficulty === 'normal'
-            ? '刚刚好的紧张感，准备好了吗？'
-            : lab.difficulty === 'easy'
-              ? '放慢节奏，从容地探索。'
-              : '更快的节奏，考验你的反应。'}
-        </p>
-      </section>
-      <section className="control-group">
-        <label className="control-label" htmlFor="particles">
-          粒子数量
-          <span className="mono">{PARTICLE_COUNTS[lab.particles].toLocaleString('en-US')}</span>
-        </label>
-        <input
-          type="range"
-          id="particles"
-          min="0"
-          max="3"
-          step="1"
-          value={lab.particles}
-          style={{ '--fill': `${(lab.particles / 3) * 100}%` } as CSSProperties}
-          onChange={(e) => lab.changeParticles(Number(e.target.value))}
-        />
-        <div className="range-labels mono">
-          <span>2K</span>
-          <span>32K</span>
-        </div>
-        <label className="control-label glow-label" htmlFor="glow">
-          辉光强度<span className="mono">{lab.glow}%</span>
-        </label>
-        <input
-          type="range"
-          id="glow"
-          min="0"
-          max="100"
-          value={lab.glow}
-          style={{ '--fill': `${lab.glow}%` } as CSSProperties}
-          onChange={(e) => lab.changeGlow(Number(e.target.value))}
-        />
-        <div className="range-labels">
-          <span>柔和</span>
-          <span>耀眼</span>
-        </div>
-      </section>
-      <section className="sound-row">
-        <label htmlFor="sound">
-          <Icon name="sound" />
-          游戏音效
-        </label>
+      </div>
+      <div className="weapon-heading">
+        <span>
+          主武器 <small className="weapon-level">MK.{s.weaponLevel}</small>
+        </span>
+        <kbd>Q</kbd>
+      </div>
+      <div className="weapon-list" role="group" aria-label="选择武器">
+        {WEAPON_IDS.map((id, i) => (
+          <button
+            key={id}
+            className={`weapon-button ${s.weapon === id ? 'selected' : ''}`}
+            style={{ '--weapon-color': WEAPONS[id].color } as CSSProperties}
+            onClick={() => lab.setWeapon(id)}
+            aria-pressed={s.weapon === id}
+            title={WEAPONS[id].description}
+          >
+            <span className={`weapon-glyph weapon-${id}`}>
+              <i />
+              <i />
+              <i />
+            </span>
+            <span>
+              <strong>{WEAPONS[id].name}</strong>
+            </span>
+            <span className="weapon-index">0{i + 1}</span>
+          </button>
+        ))}
+      </div>
+      <div className="weapon-details">
+        {['火力', '射速', '覆盖'].map((label, i) => (
+          <div className="weapon-stat" key={label}>
+            <span>{label}</span>
+            <div>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <i key={n} style={{ background: n <= weapon.bars[i] ? weapon.color : undefined }} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="auto-fire-row">
+        <span>
+          <Icon name="crosshair" /> 自动开火 <kbd>F</kbd>
+        </span>
         <button
           className="switch"
-          id="sound"
           role="switch"
-          aria-checked={lab.sound}
-          aria-label="游戏音效"
-          onClick={() => void lab.toggleSound()}
+          aria-label="自动开火"
+          aria-checked={s.autoFire}
+          onClick={lab.toggleAutoFire}
         >
           <span />
         </button>
-      </section>
-      <div className="record-card">
-        <span>个人最佳</span>
-        <strong>
-          {String(lab.best).padStart(4, '0')}
-          <span>PTS</span>
-        </strong>
-        <span className="record-decoration">↗</span>
       </div>
-      <div className="under-hood">
-        <span className="tiny-label">UNDER THE HOOD</span>
-        <h3>不止是好看。</h3>
-        <p>{GAME.tech}</p>
-        <button className="learn-link" onClick={onNotes}>
-          看看它如何工作
-          <Icon name="arrow" />
-        </button>
+      <div className="difficulty-group">
+        <span>交战强度</span>
+        <div className="segmented" role="group" aria-label="交战难度">
+          {(['easy', 'normal', 'hard'] as Difficulty[]).map((id) => (
+            <button
+              key={id}
+              className={lab.difficulty === id ? 'active' : ''}
+              aria-pressed={lab.difficulty === id}
+              disabled={active}
+              onClick={() => lab.changeDifficulty(id)}
+            >
+              {DIFFICULTIES[id].name}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="best-record">
+        <Icon name="trophy" />
+        <div>
+          <span>历史最佳</span>
+          <strong>
+            {lab.best.toLocaleString('en-US')}
+            <small>PTS</small>
+          </strong>
+        </div>
+        <span className="record-mark">↗</span>
       </div>
     </aside>
   );

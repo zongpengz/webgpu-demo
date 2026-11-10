@@ -26,5 +26,9 @@
     "vite": "8.3.6",
     "vitest": "5.1.0",
     "wgsl_reflect": "1.6.0"
+  },
+  "packageManager": "pnpm@11.6.0",
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

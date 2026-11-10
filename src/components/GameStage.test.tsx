@@ -23,7 +23,7 @@ function stage(engine: Playground['engine'], phase: Phase = 'ready') {
 }
 
 describe('WebGPU stage', () => {
-  it.each<Phase>(['ready', 'running', 'paused', 'over', 'won'])(
+  it.each<Phase>(['ready', 'running', 'paused', 'upgrade', 'over', 'won'])(
     'shows actionable errors ahead of the %s game screen',
     (phase) => {
       const html = stage('error', phase);
@@ -39,7 +39,7 @@ describe('WebGPU stage', () => {
 
   it('disables starting until WebGPU is initialized', () => {
     expect(stage('loading')).toMatch(/<button class="primary-button" disabled=""/);
-    expect(stage('webgpu')).toContain('开始飞行');
+    expect(stage('webgpu')).toContain('开始行动');
     expect(stage('webgpu')).not.toContain('role="alert"');
     expect(stage('webgpu')).not.toMatch(/<button class="primary-button" disabled=""/);
   });

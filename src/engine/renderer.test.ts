@@ -119,10 +119,10 @@ describe('WebGPU renderer lifecycle', () => {
     const data = writeBuffer.mock.calls[0][2] as Float32Array;
     expect(data.byteLength).toBe(32768 * 16);
     for (const i of [0, data.length - 4]) {
-      expect(data[i]).toBeGreaterThanOrEqual(70);
-      expect(data[i]).toBeLessThanOrEqual(930);
-      expect(data[i + 1]).toBeGreaterThanOrEqual(2.5);
-      expect(data[i + 1]).toBeLessThanOrEqual(647.5);
+      expect(data[i]).toBeGreaterThanOrEqual(0);
+      expect(data[i]).toBeLessThanOrEqual(1000);
+      expect(data[i + 1]).toBeGreaterThanOrEqual(0);
+      expect(data[i + 1]).toBeLessThanOrEqual(650);
       expect(data[i + 2]).toBeGreaterThanOrEqual(0);
       expect(data[i + 2]).toBeLessThanOrEqual(1);
       expect(data[i + 3]).toBe(0);

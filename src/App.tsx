@@ -1,113 +1,178 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Icon, IconDefinitions } from './components/Icons';
 import { Sidebar } from './components/Sidebar';
 import { GameStage } from './components/GameStage';
 import { ControlPanel } from './components/ControlPanel';
-import { NotesDialog, type NoteId } from './components/NotesDialog';
-import { GAME } from './games/catalog';
-import { usePlayground } from './hooks/usePlayground';
+import { CommandDialog } from './components/CommandDialog';
+import { NotesDialog } from './components/NotesDialog';
+import { usePlayground, PARTICLE_COUNTS } from './hooks/usePlayground';
+
+type MenuSection = 'campaign' | 'loadout' | 'settings' | 'guide';
+const MENU_SECTIONS: { id: MenuSection; label: string; icon: string }[] = [
+  { id: 'campaign', label: '战役航线', icon: 'orbit' },
+  { id: 'loadout', label: '战机整备', icon: 'ship' },
+  { id: 'settings', label: '设置', icon: 'settings' },
+  { id: 'guide', label: '飞行手册', icon: 'book' },
+];
 
 export default function App() {
   const lab = usePlayground();
-  const [notesOpen, setNotesOpen] = useState(false),
-    [note, setNote] = useState<NoteId>('compute');
-  function openNotes(id: NoteId = 'compute') {
+  const [menu, setMenu] = useState<MenuSection | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const resumeAfterMenu = useRef(false);
+
+  function openMenu() {
+    // 只恢复由本次菜单触发的暂停，保留玩家原先的暂停状态。
+    resumeAfterMenu.current = lab.snapshot.phase === 'running';
     lab.pause();
-    setNote(id);
-    setNotesOpen(true);
+    setMenu('campaign');
   }
+  function closeMenu() {
+    setMenu(null);
+    setNotesOpen(false);
+    if (resumeAfterMenu.current && lab.snapshot.phase === 'paused') lab.togglePause();
+    resumeAfterMenu.current = false;
+    // 等原生 dialog 卸载并完成焦点归还后，再让画布接收快捷键。
+    requestAnimationFrame(() => lab.canvasRef.current?.focus({ preventScroll: true }));
+  }
+
   return (
     <>
       <IconDefinitions />
-      <header className="topbar">
-        <a className="brand" href="./" aria-label="GPU Lab 首页">
-          <span className="brand-icon">
-            <Icon name="cube" />
+      <main className="flight-layout">
+        <button
+          className="flight-menu-button"
+          onClick={openMenu}
+          aria-label="打开游戏菜单"
+          aria-haspopup="dialog"
+        >
+          <span className="menu-bars" aria-hidden="true">
+            <i />
+            <i />
           </span>
-          <span>
-            GPU<span className="brand-light">LAB</span>
-            <span className="brand-dot">.</span>
-          </span>
-        </a>
-        <nav aria-label="主导航">
-          <button
-            className="nav-item active"
-            onClick={() => {
-              setNotesOpen(false);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          >
-            <Icon name="grid" />
-            游戏实验室
-          </button>
-          <button className="nav-item" onClick={() => openNotes()}>
-            <Icon name="book" />
-            学习笔记
-            <span className="new-dot" />
-          </button>
-        </nav>
-        <div className="top-right">
-          <span className="local-label">
-            <span /> LOCAL PLAYGROUND
-          </span>
-          <button className="source-button" onClick={() => openNotes()}>
-            <Icon name="code" />
-            <span>探索源码</span>
-            <span className="diagonal-arrow">↗</span>
-          </button>
-        </div>
-      </header>
-      <div className="app-shell">
-        <Sidebar engine={lab.engine} />
-        <main aria-labelledby="game-title">
-          <div className="page-heading">
+          <span>菜单</span>
+        </button>
+        <GameStage lab={lab} />
+      </main>
+      {menu && (
+        <CommandDialog titleId="command-title" className="flight-dialog" onClose={closeMenu}>
+          <div className="flight-dialog-header">
             <div>
-              <div className="eyebrow">
-                <span /> ONE FLIGHT. A SKY OF POSSIBILITIES.
-              </div>
-              <h1 id="game-title">
-                {GAME.name}
-                <span className="title-en">{GAME.en}</span>
-              </h1>
-              <p className="page-description">{GAME.description}</p>
+              <span className="overline">STARFALL PROTOCOL</span>
+              <h2 id="command-title">指挥终端</h2>
             </div>
-            <span className="experiment-label mono">EXPERIMENT / {GAME.number}</span>
+            <button className="close-button" autoFocus onClick={closeMenu} aria-label="返回游戏">
+              ×
+            </button>
           </div>
-          <div className="play-layout">
-            <GameStage lab={lab} />
-            <ControlPanel lab={lab} onNotes={() => openNotes()} />
-          </div>
-          <section className="learning-strip" aria-label="学习路径">
-            <div className="learning-intro">
-              <span className="tiny-label">PLAY. TWEAK. UNDERSTAND.</span>
-              <h2>从好玩开始，理解 WebGPU。</h2>
-            </div>
-            {(
-              [
-                { id: 'compute', title: '并行的力量', en: 'Compute Shader' },
-                { id: 'render', title: '一次绘制，一片星海', en: 'Instanced Rendering' },
-                { id: 'game', title: '让画面活起来', en: 'The Game Loop' },
-              ] as const
-            ).map((n, i) => (
-              <button key={n.id} onClick={() => openNotes(n.id)}>
-                <span className="step-number">0{i + 1}</span>
-                <span>
-                  <strong>{n.title}</strong>
-                  <small>{n.en}</small>
-                </span>
-                <span className="step-arrow">↗</span>
+          <nav className="flight-menu-tabs" aria-label="游戏菜单">
+            {MENU_SECTIONS.map((section) => (
+              <button
+                key={section.id}
+                onClick={() => setMenu(section.id)}
+                aria-pressed={menu === section.id}
+              >
+                <Icon name={section.icon} />
+                {section.label}
               </button>
             ))}
-          </section>
-          <footer className="main-footer">
-            <span>用代码，创造一点不一样的东西。</span>
-            <span className="mono">
-              WEBGPU EXPLORATIONS <span>✳</span> VOL. 001
-            </span>
-          </footer>
-        </main>
-      </div>
-      <NotesDialog open={notesOpen} initialTab={note} onClose={() => setNotesOpen(false)} />
+          </nav>
+          <div className="flight-dialog-content">
+            {menu === 'campaign' && <Sidebar lab={lab} />}
+            {menu === 'loadout' && <ControlPanel lab={lab} />}
+            {menu === 'settings' && (
+              <div className="flight-settings">
+                <div className="sound-setting">
+                  <span>游戏音效</span>
+                  <button
+                    className="switch"
+                    role="switch"
+                    aria-label="游戏音效"
+                    aria-checked={lab.sound}
+                    onClick={() => void lab.toggleSound()}
+                  >
+                    <span />
+                  </button>
+                </div>
+                <label htmlFor="particles">
+                  星尘密度 <span>{PARTICLE_COUNTS[lab.particles].toLocaleString('en-US')}</span>
+                </label>
+                <input
+                  id="particles"
+                  type="range"
+                  min="0"
+                  max="3"
+                  value={lab.particles}
+                  onChange={(e) => lab.changeParticles(Number(e.target.value))}
+                />
+                <label htmlFor="glow">
+                  光晕强度 <span>{lab.glow}%</span>
+                </label>
+                <input
+                  id="glow"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={lab.glow}
+                  onChange={(e) => lab.changeGlow(Number(e.target.value))}
+                />
+                <div className="settings-metrics">
+                  <span>
+                    帧率<strong>{lab.stats.fps || '—'} FPS</strong>
+                  </span>
+                  <span>
+                    绘制调用<strong>{lab.stats.draws}</strong>
+                  </span>
+                  <span>
+                    渲染器<strong>WebGPU</strong>
+                  </span>
+                </div>
+                <button
+                  className="engine-notes-link"
+                  onClick={() => {
+                    setMenu(null);
+                    setNotesOpen(true);
+                  }}
+                >
+                  <Icon name="code" />
+                  引擎档案
+                  <Icon name="arrow" />
+                </button>
+              </div>
+            )}
+            {menu === 'guide' && (
+              <div className="flight-guide">
+                <div className="guide-rows">
+                  {[
+                    ['WASD / ↑↓←→', '移动，也可使用鼠标或触屏'],
+                    ['SPACE', '闪避冲刺，短暂无敌'],
+                    ['E / B', '释放脉冲，清除敌方弹幕'],
+                    ['Q', '切换双炮、散射与穿刺'],
+                    ['F / J', '切换自动开火 / 按住手动开火'],
+                    ['P / ESC', '暂停或继续'],
+                    ['1 / 2 / 3', '选择关间强化'],
+                    ['P / + / S / B', '补给标记 · 火力 / 修复 / 护盾 / 脉冲'],
+                  ].map(([key, text]) => (
+                    <div key={key}>
+                      <kbd>{key}</kbd>
+                      <span>{text}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="guide-note">
+                  突破三段航线，击败每关首领。护盾在脱离伤害 5
+                  秒后恢复，靠近补给可自动吸附。激光预警出现后横向闪避。
+                </p>
+              </div>
+            )}
+          </div>
+          <button className="primary-button return-to-flight" onClick={closeMenu}>
+            返回战场
+            <Icon name="arrow" />
+          </button>
+        </CommandDialog>
+      )}
+      <NotesDialog open={notesOpen} initialTab="compute" onClose={closeMenu} />
     </>
   );
 }
